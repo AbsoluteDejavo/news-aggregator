@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNews - Content Aggregator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-top">
+            <h1>CNews</h1>
+            <div class="header-controls">
+                <button id="refreshButton" title="Refresh Articles">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="bookmarksButton" title="Bookmarks">
+                    <i class="fas fa-bookmark"></i>
+                </button>
+                <button id="darkModeToggle" title="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+        <div class="header-bottom">
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search" placeholder="Search articles...">
+            </div>
+            <div class="filters">
+                <select id="categoryFilter">
+                    <option value="">All Categories</option>
+                </select>
+                <select id="sourceFilter">
+                    <option value="">All Sources</option>
+                </select>
+                <select id="timeFilter">
+                    <option value="1">Last 24 hours</option>
+                    <option value="7" selected>Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div id="articles" class="articles-grid"></div>
+    </main>
+
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>Loading articles...</p>
+    </div>
+
+    <div id="error-message" class="error-message hidden">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Failed to load articles. Please try again.</p>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
