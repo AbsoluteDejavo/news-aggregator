@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import db, Article
-from fetcher import fetch_and_store_articles, validate_api_key
+from .models import db, Article
+from .fetcher import fetch_and_store_articles, validate_api_key
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from datetime import datetime, timedelta

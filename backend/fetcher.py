@@ -1,5 +1,5 @@
 from newsapi import NewsApiClient
-from models import db, Article
+from .models import db, Article
 from datetime import datetime, timedelta
 import logging
 import requests
