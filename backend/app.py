@@ -20,7 +20,7 @@ CORS(app)
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///articles.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['NEWS_API_KEY'] = 'd274aedde0814e7d9d700910fbf4f2bc'  # Your API key
+app.config['NEWS_API_KEY'] = 'YOUR NEWS API KEY'  # Your API key
 
 logging.info(f"Static folder path: {app.static_folder}")
 logging.info(f"Static URL path: {app.static_url_path}")
