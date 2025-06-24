@@ -1,7 +1,11 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from .models import db, Article
-from .fetcher import fetch_and_store_articles, validate_api_key
+import os
+import sys
+
+# Add the parent directory to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from backend import db, Article, fetch_and_store_articles, validate_api_key
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from datetime import datetime, timedelta
