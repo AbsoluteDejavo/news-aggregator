@@ -8,3 +8,4 @@ Flask-SQLAlchemy==3.0.5
 python-dotenv==1.0.0
 urllib3==2.0.7
 newsapi-python==0.2.7
+gunicorn==21.2.0

@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 # Initialize Flask app with static files configuration
 current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dir = os.path.join(os.path.dirname(current_dir), 'frontend')
-app = Flask(__name__, static_folder=frontend_dir, static_url_path='/static')
+app = Flask(__name__)  # Remove static folder configuration as Vercel will handle static files
 CORS(app)
 
 # Configuration
