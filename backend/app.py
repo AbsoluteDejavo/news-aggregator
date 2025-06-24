@@ -1,42 +1,86 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from models import db, Article
-from fetcher import fetch_and_store_articles
+from fetcher import fetch_and_store_articles, validate_api_key
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
 import logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Load environment variables from .env file
+load_dotenv()
 
-# Initialize Flask app with static files configuration
+# Configure logging with more detail
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# Initialize Flask app
 current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dir = os.path.join(os.path.dirname(current_dir), 'frontend')
-app = Flask(__name__)  # Remove static folder configuration as Vercel will handle static files
-CORS(app)
+
+# Log the frontend directory path
+logging.info(f"Frontend directory path: {frontend_dir}")
+logging.info(f"Frontend directory exists: {os.path.exists(frontend_dir)}")
+if os.path.exists(frontend_dir):
+    logging.info(f"Frontend directory contents: {os.listdir(frontend_dir)}")
+
+app = Flask(__name__, 
+           static_folder=None)  # Disable default static handling
+
+# Configure CORS to allow requests from any origin
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "DELETE"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///articles.db'
+if os.environ.get('VERCEL_ENV') == 'production':
+    app.config['SQLALCHEMY_DATABASE_URI'] = '/tmp/articles.db'
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///articles.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['NEWS_API_KEY'] = 'YOUR NEWS API KEY'  # Your API key
+
+# Get API key from environment variable
+app.config['NEWS_API_KEY'] = os.environ.get('NEWS_API_KEY')
+if not app.config['NEWS_API_KEY']:
+    logging.warning("No NEWS_API_KEY found in environment variables. Please set it before running the application.")
+
+# Validate API key on startup
+try:
+    if not validate_api_key(app.config['NEWS_API_KEY']):
+        logging.error("Invalid API key detected on startup. Please check your API key configuration.")
+except Exception as e:
+    logging.error(f"Error validating API key on startup: {str(e)}")
 
 logging.info(f"Static folder path: {app.static_folder}")
 logging.info(f"Static URL path: {app.static_url_path}")
 
-# Create frontend directory if it doesn't exist
-os.makedirs(frontend_dir, exist_ok=True)
+# Initialize database
 db.init_app(app)
 
 # Ensure the instance folder exists
 os.makedirs('instance', exist_ok=True)
 
-# Serve frontend
-@app.route('/')
-def serve_frontend():
+# Serve static files and frontend routes
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
     try:
-        return app.send_static_file('index.html')
+        logging.info(f"Attempting to serve: {path if path else 'index.html'}")
+        if path:
+            if os.path.exists(os.path.join(frontend_dir, path)):
+                return send_from_directory(frontend_dir, path)
+            else:
+                logging.warning(f"File not found: {path}, serving index.html instead")
+        return send_from_directory(frontend_dir, 'index.html')
     except Exception as e:
         logging.error(f"Error serving frontend: {str(e)}")
         return f"""
@@ -53,16 +97,6 @@ def serve_frontend():
             </body>
         </html>
         """, 500
-
-# Additional route to serve static files explicitly
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    try:
-        logging.info(f"Serving static file: {filename}")
-        return app.send_static_file(filename)
-    except Exception as e:
-        logging.error(f"Error serving static file {filename}: {str(e)}")
-        return jsonify({"error": f"File not found: {filename}"}), 404
 
 # API Routes
 @app.route('/api/articles')

@@ -39,25 +39,37 @@ function formatDate(dateString) {
 
 function toggleLoading(show) {
     loading = show;
-    elements.loadingIndicator.classList.toggle('hidden', !show);
+    if (elements.loadingIndicator) {
+        elements.loadingIndicator.style.display = show ? 'flex' : 'none';
+        elements.loadingIndicator.classList.toggle('hidden', !show);
+    }
 }
 
-function toggleError(show) {
-    elements.errorMessage.classList.toggle('hidden', !show);
-    if (show) {
-        setTimeout(() => toggleError(false), 5000); // Hide error after 5 seconds
+function toggleError(show, message = 'Failed to load articles. Please try again.') {
+    if (elements.errorMessage) {
+        elements.errorMessage.classList.toggle('hidden', !show);
+        if (show) {
+            const messageElement = elements.errorMessage.querySelector('p');
+            if (messageElement) {
+                messageElement.textContent = message;
+            }
+            setTimeout(() => toggleError(false), 5000); // Hide error after 5 seconds
+        }
     }
 }
 
 // API calls
 async function fetchArticles() {
-    if (loading) return;
-    
-    toggleLoading(true);
-    toggleError(false);
+    if (loading) {
+        console.log('Already loading articles, skipping fetch');
+        return;
+    }
     
     try {
+        toggleLoading(true);
+        toggleError(false);
         console.log('Fetching articles...');
+        
         const queryParams = new URLSearchParams({
             q: elements.search.value || '',
             category: elements.categoryFilter.value || '',
