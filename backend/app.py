@@ -50,15 +50,25 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Get API key from environment variable
 app.config['NEWS_API_KEY'] = os.environ.get('NEWS_API_KEY')
+logging.info(f"Environment: {os.environ.get('VERCEL_ENV', 'development')}")
+logging.info(f"API Key present: {'Yes' if app.config['NEWS_API_KEY'] else 'No'}")
+logging.info(f"API Key length: {len(app.config['NEWS_API_KEY']) if app.config['NEWS_API_KEY'] else 0}")
+
 if not app.config['NEWS_API_KEY']:
-    logging.warning("No NEWS_API_KEY found in environment variables. Please set it before running the application.")
+    logging.error("No NEWS_API_KEY found in environment variables. Please set it before running the application.")
+    raise ValueError("NEWS_API_KEY environment variable is required")
 
 # Validate API key on startup
 try:
-    if not validate_api_key(app.config['NEWS_API_KEY']):
-        logging.error("Invalid API key detected on startup. Please check your API key configuration.")
+    validation_result = validate_api_key(app.config['NEWS_API_KEY'])
+    if not validation_result:
+        error_msg = "Invalid API key detected on startup. Please check your API key configuration."
+        logging.error(error_msg)
+        raise ValueError(error_msg)
+    logging.info("API key validation successful")
 except Exception as e:
     logging.error(f"Error validating API key on startup: {str(e)}")
+    raise
 
 logging.info(f"Static folder path: {app.static_folder}")
 logging.info(f"Static URL path: {app.static_url_path}")
@@ -102,8 +112,10 @@ def serve_frontend(path):
 @app.route('/api/articles')
 def get_articles():
     try:
-        # Log request details
+        # Log request details and environment
         logging.info(f"Received request for articles with params: {dict(request.args)}")
+        logging.info(f"Current environment: {os.environ.get('VERCEL_ENV', 'development')}")
+        logging.info(f"API Key status: {'Present' if app.config['NEWS_API_KEY'] else 'Missing'}")
         
         # Check if we have any articles
         article_count = Article.query.count()
@@ -113,12 +125,23 @@ def get_articles():
             # Fetch articles if database is empty
             logging.info("No articles found in database, fetching new articles...")
             try:
+                if not app.config['NEWS_API_KEY']:
+                    raise ValueError("NEWS_API_KEY is not configured")
+                
+                # Validate API key before fetching
+                if not validate_api_key(app.config['NEWS_API_KEY']):
+                    raise ValueError("Invalid NEWS_API_KEY")
+                
                 fetch_and_store_articles(app.config['NEWS_API_KEY'])
                 article_count = Article.query.count()
                 logging.info(f"Fetched articles, new count: {article_count}")
+            except ValueError as ve:
+                error_msg = str(ve)
+                logging.error(f"Configuration error: {error_msg}")
+                return jsonify({"error": error_msg}), 500
             except Exception as e:
                 logging.error(f"Error fetching articles: {str(e)}")
-                return jsonify({"error": "Failed to fetch articles from news API"}), 500
+                return jsonify({"error": f"Failed to fetch articles: {str(e)}"}), 500
         
         query = Article.query.order_by(Article.published_at.desc())
         
@@ -187,6 +210,23 @@ def handle_bookmarks():
     
     db.session.commit()
     return jsonify(article.to_dict())
+
+# Health check endpoint
+@app.route('/api/health')
+def health_check():
+    try:
+        return jsonify({
+            "status": "healthy",
+            "environment": os.environ.get('VERCEL_ENV', 'development'),
+            "api_key_configured": bool(app.config['NEWS_API_KEY']),
+            "database_initialized": bool(db.engine.table_names()),
+            "article_count": Article.query.count()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e)
+        }), 500
 
 def fetch_articles_job():
     """Background job to fetch articles with application context"""
