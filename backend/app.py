@@ -46,11 +46,15 @@ CORS(app, resources={
 
 # Configuration
 if os.environ.get('VERCEL_ENV') == 'production':
-    app.config['SQLALCHEMY_DATABASE_URI'] = '/tmp/articles.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/articles.db'
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///articles.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Ensure the /tmp directory exists in production
+if os.environ.get('VERCEL_ENV') == 'production':
+    os.makedirs('/tmp', exist_ok=True)
 
 # Get API key from environment variable
 app.config['NEWS_API_KEY'] = os.environ.get('NEWS_API_KEY')
@@ -78,10 +82,16 @@ logging.info(f"Static folder path: {app.static_folder}")
 logging.info(f"Static URL path: {app.static_url_path}")
 
 # Initialize database
-db.init_app(app)
-
-# Ensure the instance folder exists
-os.makedirs('instance', exist_ok=True)
+try:
+    db.init_app(app)
+    # Create the database file directory if it doesn't exist
+    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:////', '') if os.environ.get('VERCEL_ENV') == 'production' else 'instance'
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    with app.app_context():
+        db.create_all()
+except Exception as e:
+    logging.error(f"Database initialization error: {str(e)}")
+    raise
 
 # Serve static files and frontend routes
 @app.route('/', defaults={'path': ''})
