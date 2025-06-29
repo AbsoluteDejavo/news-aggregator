@@ -85,8 +85,14 @@ logging.info(f"Static URL path: {app.static_url_path}")
 try:
     db.init_app(app)
     # Create the database file directory if it doesn't exist
-    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:////', '') if os.environ.get('VERCEL_ENV') == 'production' else 'instance'
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    if os.environ.get('VERCEL_ENV') == 'production':
+        db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:////', '')
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    else:
+        # For development, create the instance directory in the current working directory
+        instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
+        os.makedirs(instance_dir, exist_ok=True)
+    
     with app.app_context():
         db.create_all()
 except Exception as e:
